@@ -1,5 +1,6 @@
 ipython
 pip
+pudb
 setuptools
 twine
 wheel

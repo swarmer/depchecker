@@ -1,10 +1,20 @@
+import os
+
 import click
 import pkg_resources
 
 
 @click.command()
-def depchecker_cli():
-    working_set = pkg_resources.working_set
+@click.option('env_path', '--env-path', default=None, help='Path to env to check')
+def depchecker_cli(env_path):
+    if not env_path:
+        working_set = pkg_resources.working_set
+    else:
+        working_set = pkg_resources.WorkingSet(
+            entries=[
+                os.path.join(env_path, 'lib/python2.7/site-packages'),
+            ]
+        )
 
     requirements = []
     for package in working_set:
