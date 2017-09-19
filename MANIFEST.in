@@ -1,0 +1,2 @@
+include *.md *.txt LICENSE tox.ini .travis.yml
+recursive-include tests *.py
