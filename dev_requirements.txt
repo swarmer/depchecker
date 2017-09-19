@@ -1,3 +1,4 @@
+ipython
 pip
 setuptools
 twine
