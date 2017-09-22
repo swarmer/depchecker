@@ -1,7 +1,23 @@
 import os
+import glob
+import sys
 
 import click
 import pkg_resources
+
+
+def find_site_packages(env_path):
+    patterns = [
+        'site-packages/',
+        '*/site-packages/',
+        '*/*/site-packages',
+    ]
+
+    result = []
+    for pattern in patterns:
+        result.extend(glob.glob(os.path.join(env_path, pattern)))
+
+    return result
 
 
 @click.command()
@@ -10,11 +26,16 @@ def depchecker_cli(env_path):
     if not env_path:
         working_set = pkg_resources.working_set
     else:
-        working_set = pkg_resources.WorkingSet(
-            entries=[
-                os.path.join(env_path, 'lib/python2.7/site-packages'),
-            ]
-        )
+        site_packages_paths = find_site_packages(env_path)
+        if not site_packages_paths:
+            print('Error: can\'t find site-packages in: %s' % env_path)
+            sys.exit(1)
+
+        print('Checking packages in:')
+        for path in site_packages_paths:
+            print(' ' * 4 + str(path))
+
+        working_set = pkg_resources.WorkingSet(entries=site_packages_paths)
 
     requirements = []
     for package in working_set:
