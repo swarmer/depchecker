@@ -21,7 +21,9 @@ def depchecker_cli(env_path):
         requirements.extend((package, requirement) for requirement in package.requires())
 
     conflicts = False
+    package_count = 0
     for package in working_set:
+        package_count += 1
         for source_package, requirement in requirements:
             if package.key != requirement.key:
                 continue
@@ -35,7 +37,7 @@ def depchecker_cli(env_path):
                 )
 
     if not conflicts:
-        print('Everything is OK')
+        print('Everything is OK (checked %d packages)' % package_count)
 
 
 if __name__ == '__main__':
