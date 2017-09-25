@@ -13,7 +13,7 @@ def find_site_packages(env_path):
     patterns = [
         'site-packages/',
         '*/site-packages/',
-        '*/*/site-packages',
+        '*/*/site-packages/',
     ]
 
     result = []
