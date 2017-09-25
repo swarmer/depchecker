@@ -50,9 +50,10 @@ CLASSIFIERS = [
 ]
 DESCRIPTION = 'A tool that checks python project dependencies'
 INSTALL_REQUIRES = [
-    'click>=6.7,<7.0',
-    'requests>=2.18,<3.0',
-    'six>=1.11,<2.0',
+    'click>=6.0,<7.0',
+    'requests>=2.7,<3.0',
+    'setuptools>=19.0',
+    'six>=1.10,<2.0',
 ]
 KEYWORDS = ['dependency', 'package', 'vulnerability', 'requirements']
 LICENSE = 'MIT'

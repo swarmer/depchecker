@@ -1,104 +1,90 @@
 from __future__ import print_function
 
-import os
-import glob
 import sys
 
 import click
 import pkg_resources
 import requests
 
+from .packages import InvalidEnvironmentError, InvalidRequirementsListError, PackageEnvironment
 
-def find_site_packages(env_path):
-    patterns = [
-        'site-packages/',
-        '*/site-packages/',
-        '*/*/site-packages/',
-    ]
 
-    result = []
-    for pattern in patterns:
-        result.extend(glob.glob(os.path.join(env_path, pattern)))
-
-    return result
+def fatal_error(exception):
+    print('Error: %s' % exception)
+    sys.exit(2)
 
 
 def get_safety_db():
     print('Downloading safety-db...')
-    safety_db_url = 'https://raw.githubusercontent.com/pyupio/safety-db/master/data/insecure_full.json'
+    safety_db_url = 'https://raw.githubusercontent.com/pyupio/safety-db/master/data/insecure_full.json'  # noqa: line-too-long
 
     response = requests.get(safety_db_url)
     return response.json()
 
 
-@click.command()
-@click.option('env_path', '--env-path', default=None, help='Path to env to check')
-def depchecker_cli(env_path):
-    if not env_path:
-        print('Checking packages in current virtual environment')
-        working_set = pkg_resources.working_set
-    else:
-        site_packages_paths = find_site_packages(env_path)
-        if not site_packages_paths:
-            print('Error: can\'t find site-packages in: %s' % env_path)
-            sys.exit(1)
+def get_package_environment(env_path, requirements_paths):
+    try:
+        package_environment = PackageEnvironment(env_path, requirements_paths)
+    except (InvalidEnvironmentError, InvalidRequirementsListError) as e:
+        fatal_error(e)
 
-        print('Checking packages in:')
-        for path in site_packages_paths:
-            print(' ' * 4 + str(path))
+    print('Checking packages in:')
+    for path in package_environment.package_search_paths:
+        if path == '':
+            path = '.'
 
-        working_set = pkg_resources.WorkingSet(entries=site_packages_paths)
+        print(' ' * 2 + str(path))
 
-    print()
+    return package_environment
 
-    # check conflicts between installed packages
+
+def check_conflicts(package_environment):
     print('Checking conflicts between installed packages...')
 
     requirements = []
-    for package in working_set:
-        requirements.extend((package, requirement) for requirement in package.requires())
+    for source in package_environment.requirements_sources:
+        requirements.extend((source, requirement) for requirement in source.requires())
 
     conflicts = False
     package_count = 0
-    for package in working_set:
+    for package in package_environment.packages:
         package_count += 1
 
         relevant_requirements = []
-        for source_package, requirement in requirements:
+        for source, requirement in requirements:
             if package.key == requirement.key:
-                relevant_requirements.append((source_package, requirement))
+                relevant_requirements.append((source, requirement))
 
-        for source_package, requirement in relevant_requirements:
+        for source, requirement in relevant_requirements:
             if package not in requirement:
                 conflicts = True
                 print(
-                    'CONFLICT: package %s doesn\'t conform to %s specified in %s' % (
-                        package, requirement, source_package,
+                    'CONFLICT: package %s doesn\'t conform to %s specified by %s' % (
+                        package, requirement, source,
                     )
                 )
 
-                for other_source_package, other_requirement in relevant_requirements:
-                    if other_requirement == source_package and other_requirement == requirement:
+                for other_source, other_requirement in relevant_requirements:
+                    if other_source == source and other_requirement == requirement:
                         continue
 
                     print(
                         '    Also required as %s by %s' % (
-                            other_requirement, other_source_package,
+                            other_requirement, other_source,
                         )
                     )
 
     if not conflicts:
         print('Everything is OK (checked %d packages)' % package_count)
 
-    print()
 
-    # check for vulnerabilities
+def check_vulnerabilities(package_environment):
     print('Checking installed packages for known vulnerabilities...')
     safety_db = get_safety_db()
 
     vulnerabilities = False
     package_count = 0
-    for package in working_set:
+    for package in package_environment.packages:
         package_count += 1
 
         if package.key not in safety_db:
@@ -114,6 +100,23 @@ def depchecker_cli(env_path):
 
     if not vulnerabilities:
         print('Everything is OK (checked %d packages)' % package_count)
+
+
+@click.command()
+@click.option(
+    'env_path', '--env-path', default=None,
+    help='Path to a virtual environment to be checked',
+)
+@click.option(
+    'reqs', '--reqs', multiple=True,
+    help='Path to a requirements file that packages will be additionally checked against',
+)
+def depchecker_cli(env_path, reqs):
+    package_environment = get_package_environment(env_path, reqs)
+    print()
+    check_conflicts(package_environment)
+    print()
+    check_vulnerabilities(package_environment)
 
 
 if __name__ == '__main__':

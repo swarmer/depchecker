@@ -1,0 +1,2 @@
+# comments по-русски
+setuptools<0.1
