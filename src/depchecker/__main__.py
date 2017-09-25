@@ -1,9 +1,12 @@
+from __future__ import print_function
+
 import os
 import glob
 import sys
 
 import click
 import pkg_resources
+import requests
 
 
 def find_site_packages(env_path):
@@ -20,10 +23,19 @@ def find_site_packages(env_path):
     return result
 
 
+def get_safety_db():
+    print('Downloading safety-db...')
+    safety_db_url = 'https://raw.githubusercontent.com/pyupio/safety-db/master/data/insecure_full.json'
+
+    response = requests.get(safety_db_url)
+    return response.json()
+
+
 @click.command()
 @click.option('env_path', '--env-path', default=None, help='Path to env to check')
 def depchecker_cli(env_path):
     if not env_path:
+        print('Checking packages in current virtual environment')
         working_set = pkg_resources.working_set
     else:
         site_packages_paths = find_site_packages(env_path)
@@ -36,6 +48,11 @@ def depchecker_cli(env_path):
             print(' ' * 4 + str(path))
 
         working_set = pkg_resources.WorkingSet(entries=site_packages_paths)
+
+    print()
+
+    # check conflicts between installed packages
+    print('Checking conflicts between installed packages...')
 
     requirements = []
     for package in working_set:
@@ -58,6 +75,30 @@ def depchecker_cli(env_path):
                 )
 
     if not conflicts:
+        print('Everything is OK (checked %d packages)' % package_count)
+
+    print()
+
+    # check for vulnerabilities
+    safety_db = get_safety_db()
+
+    vulnerabilities = False
+    package_count = 0
+    for package in working_set:
+        package_count += 1
+
+        if package.key not in safety_db:
+            continue
+
+        for vulnerability in safety_db[package.key]:
+            for spec in vulnerability['specs']:
+                requirement = pkg_resources.Requirement.parse(package.key + spec)
+                if package in requirement:
+                    print('VULNERABILITY: %s: %s' % (package, vulnerability['advisory']))
+                    vulnerabilities = True
+                    break
+
+    if not vulnerabilities:
         print('Everything is OK (checked %d packages)' % package_count)
 
 

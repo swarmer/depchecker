@@ -51,6 +51,7 @@ CLASSIFIERS = [
 DESCRIPTION = 'A tool that checks python project dependencies'
 INSTALL_REQUIRES = [
     'click>=6.7,<7.0',
+    'requests>=2.18,<3.0',
     'six>=1.11,<2.0',
 ]
 KEYWORDS = ['dependency', 'package', 'vulnerability', 'requirements']
