@@ -62,10 +62,13 @@ def depchecker_cli(env_path):
     package_count = 0
     for package in working_set:
         package_count += 1
-        for source_package, requirement in requirements:
-            if package.key != requirement.key:
-                continue
 
+        relevant_requirements = []
+        for source_package, requirement in requirements:
+            if package.key == requirement.key:
+                relevant_requirements.append((source_package, requirement))
+
+        for source_package, requirement in relevant_requirements:
             if package not in requirement:
                 conflicts = True
                 print(
@@ -74,12 +77,23 @@ def depchecker_cli(env_path):
                     )
                 )
 
+                for other_source_package, other_requirement in relevant_requirements:
+                    if other_requirement == source_package and other_requirement == requirement:
+                        continue
+
+                    print(
+                        '    Also required as %s by %s' % (
+                            other_requirement, other_source_package,
+                        )
+                    )
+
     if not conflicts:
         print('Everything is OK (checked %d packages)' % package_count)
 
     print()
 
     # check for vulnerabilities
+    print('Checking installed packages for known vulnerabilities...')
     safety_db = get_safety_db()
 
     vulnerabilities = False
