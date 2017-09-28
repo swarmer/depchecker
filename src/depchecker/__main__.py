@@ -69,12 +69,45 @@ def check_conflicts(package_environment):
                         continue
 
                     print(
-                        '    Also required as %s by %s' % (
+                        ' ' * 2 + 'Also required as %s by %s' % (
                             other_requirement, other_source,
                         )
                     )
 
     if not conflicts:
+        print('Everything is OK (checked %d packages)' % package_count)
+
+
+def check_unused_packages(package_environment):
+    blacklist = [
+        'python',
+        'wsgiref',
+    ]
+
+    print('Checking if any installed packages are unused...')
+
+    requirements = []
+    for source in package_environment.requirements_sources:
+        requirements.extend((source, requirement) for requirement in source.requires())
+
+    unused = False
+    package_count = 0
+    for package in package_environment.packages:
+        if package.key in blacklist:
+            continue
+
+        package_count += 1
+
+        relevant_requirements = []
+        for source, requirement in requirements:
+            if package.key == requirement.key:
+                relevant_requirements.append((source, requirement))
+
+        if not relevant_requirements:
+            unused = True
+            print('UNUSED: package %s isn\'t required by anything' % package)
+
+    if not unused:
         print('Everything is OK (checked %d packages)' % package_count)
 
 
@@ -115,6 +148,8 @@ def depchecker_cli(env_path, reqs):
     package_environment = get_package_environment(env_path, reqs)
     print()
     check_conflicts(package_environment)
+    print()
+    check_unused_packages(package_environment)
     print()
     check_vulnerabilities(package_environment)
 

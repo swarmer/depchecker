@@ -1,4 +1,5 @@
 # packages for development/testing/packaging
+flake8
 ipython
 pip
 pudb
