@@ -77,6 +77,8 @@ def check_conflicts(package_environment):
     if not conflicts:
         print('Everything is OK (checked %d packages)' % package_count)
 
+    return not conflicts
+
 
 def check_unused_packages(package_environment):
     blacklist = [
@@ -110,6 +112,8 @@ def check_unused_packages(package_environment):
     if not unused:
         print('Everything is OK (checked %d packages)' % package_count)
 
+    return not unused
+
 
 def check_vulnerabilities(package_environment):
     print('Checking installed packages for known vulnerabilities...')
@@ -134,6 +138,8 @@ def check_vulnerabilities(package_environment):
     if not vulnerabilities:
         print('Everything is OK (checked %d packages)' % package_count)
 
+    return not vulnerabilities
+
 
 @click.command()
 @click.option(
@@ -147,11 +153,15 @@ def check_vulnerabilities(package_environment):
 def depchecker_cli(env_path, reqs):
     package_environment = get_package_environment(env_path, reqs)
     print()
-    check_conflicts(package_environment)
+
+    ok = True
+    ok &= check_conflicts(package_environment)
     print()
-    check_unused_packages(package_environment)
+    ok &= check_unused_packages(package_environment)
     print()
-    check_vulnerabilities(package_environment)
+    ok &= check_vulnerabilities(package_environment)
+
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == '__main__':
