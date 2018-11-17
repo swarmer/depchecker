@@ -102,5 +102,7 @@ env3/
 # mypy
 .mypy_cache/
 
+.idea/
+
 # vscode
 .vscode/

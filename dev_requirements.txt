@@ -10,7 +10,7 @@ wheel
 # oldest supported dependencies
 # (except for setuptools, we want to package using the latest version)
 click==6.0
-requests==2.7
+requests>=2.20.0
 six==1.10
 
 # this project itself
